@@ -15,7 +15,7 @@ import math
 from numba import jit
 
 from config import cfg
-from utils.box_overlaps import *
+from box_overlaps import *
 
 
 def lidar_to_bird_view(x, y, factor=1):
@@ -430,7 +430,7 @@ def box3d_to_label(batch_box3d, batch_cls, batch_score=[], coordinate='camera'):
                 x, y, z, h, w, l, r = box3d
                 box3d = [h, w, l, x, y, z, r]
                 label.append(template.format(
-                    cls, 0, 0, 0, *box2d, *box3d, score))
+                    cls, 0, 0, 0, box2d[0],box2d[1],box2d[2],box2d[3], box3d[0], box3d[1],box3d[2],box3d[3],box3d[4],box3d[5],box3d[6], score))
             batch_label.append(label)
     else:
         template = '{} ' + ' '.join(['{:.4f}' for i in range(14)]) + '\n'
@@ -448,7 +448,7 @@ def box3d_to_label(batch_box3d, batch_cls, batch_score=[], coordinate='camera'):
                         box[np.newaxis, :].astype(np.float32), cal_projection=False)[0]
                 x, y, z, h, w, l, r = box3d
                 box3d = [h, w, l, x, y, z, r]
-                label.append(template.format(cls, 0, 0, 0, *box2d, *box3d))
+                label.append(template.format(cls, 0, 0, 0, box2d[0],box2d[1],box2d[2],box2d[3], box3d[0], box3d[1],box3d[2],box3d[3],box3d[4],box3d[5],box3d[6]))
             batch_label.append(label)
 
     return np.array(batch_label)
@@ -492,9 +492,9 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
     # defined in eq(1) in 2.2
     anchors_reshaped = anchors.reshape(-1, 7)
     anchors_d = np.sqrt(anchors_reshaped[:, 4]**2 + anchors_reshaped[:, 5]**2)
-    pos_equal_one = np.zeros((batch_size, *feature_map_shape, 2))
-    neg_equal_one = np.zeros((batch_size, *feature_map_shape, 2))
-    targets = np.zeros((batch_size, *feature_map_shape, 14))
+    pos_equal_one = np.zeros((batch_size, feature_map_shape[0], feature_map_shape[1], 2))
+    neg_equal_one = np.zeros((batch_size, feature_map_shape[0], feature_map_shape[1], 2))
+    targets = np.zeros((batch_size, feature_map_shape[0], feature_map_shape[1], 14))
 
     for batch_id in range(batch_size):
         # TODO: too slow, use untilting box instead
@@ -533,7 +533,7 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
 
         # cal the target and set the equal one
         index_x, index_y, index_z = np.unravel_index(
-            id_pos, (*feature_map_shape, 2))
+            id_pos, (feature_map_shape[0],feature_map_shape[1], 2))
         pos_equal_one[batch_id, index_x, index_y, index_z] = 1
 
         # ATTENTION: index_z should be np.array
@@ -553,11 +553,11 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
             batch_gt_boxes3d[batch_id][id_pos_gt, 6] - anchors_reshaped[id_pos, 6])
 
         index_x, index_y, index_z = np.unravel_index(
-            id_neg, (*feature_map_shape, 2))
+            id_neg, (feature_map_shape[0],feature_map_shape[1], 2))
         neg_equal_one[batch_id, index_x, index_y, index_z] = 1
         # to avoid a box be pos/neg in the same time
         index_x, index_y, index_z = np.unravel_index(
-            id_highest, (*feature_map_shape, 2))
+            id_highest, (feature_map_shape[0],feature_map_shape[1], 2))
         neg_equal_one[batch_id, index_x, index_y, index_z] = 0
 
     return pos_equal_one, neg_equal_one, targets

@@ -31,11 +31,13 @@ parser.add_argument('-l', '--lr', type=float, nargs='?', default=0.001,
                     help='set learning rate')
 args = parser.parse_args()
 
-dataset_dir = './data/object'
+dataset_dir = '/home/yexi/voxel_dataset'
 log_dir = os.path.join('./log', args.tag)
 save_model_dir = os.path.join('./save_model', args.tag)
-os.makedirs(log_dir, exist_ok=True)
-os.makedirs(save_model_dir, exist_ok=True)
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+if not os.path.exists(save_model_dir):
+    os.makedirs(save_model_dir)
 
 
 def main(_):
@@ -43,9 +45,11 @@ def main(_):
     with tf.Graph().as_default():
         global save_model_dir
         with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True,
-                         is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as train_loader, \
-            KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=50, require_shuffle=True,
-                        is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as valid_loader:
+                is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as train_loader:
+#         with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True,
+#                          is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as train_loader, \
+#             KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True,
+#                         is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as valid_loader:
 
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
@@ -112,17 +116,6 @@ def main(_):
 
                     if is_summary:
                         summary_writer.add_summary(ret[-1], iter)
-
-                    if is_summary_image:
-                        ret = model.predict_step(
-                            sess, valid_loader.load(), summary=True)
-                        summary_writer.add_summary(ret[-1], iter)
-
-                    if is_validate:
-                        ret = model.validate_step(
-                            sess, valid_loader.load(), summary=True)
-                        summary_writer.add_summary(ret[-1], iter)
-
                     if check_if_should_pause(args.tag):
                         model.saver.save(sess, os.path.join(
                             save_model_dir, 'checkpoint'), global_step=model.global_step)

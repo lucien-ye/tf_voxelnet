@@ -7,6 +7,6 @@
 # Last Modified : Thu 21 Dec 2017 08:03:57 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
-from model.group_pointcloud import *
-from model.rpn import *
-from model.model import *
+from group_pointcloud import *
+from rpn import *
+from model import *

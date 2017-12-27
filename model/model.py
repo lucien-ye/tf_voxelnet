@@ -15,8 +15,8 @@ from numba import jit
 
 from config import cfg
 from utils import *
-from model.group_pointcloud import FeatureNet
-from model.rpn import MiddleAndRPN
+from group_pointcloud import FeatureNet
+from rpn import MiddleAndRPN
 
 
 class RPN3D(object):
@@ -115,44 +115,54 @@ class RPN3D(object):
 
         self.anchors = cal_anchors()
         # for predict and image summary
-        self.rgb = tf.placeholder(
-            tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
-        self.bv = tf.placeholder(tf.uint8, [
-                                 None, cfg.BV_LOG_FACTOR * cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR * cfg.INPUT_WIDTH, 3])
-        self.bv_heatmap = tf.placeholder(tf.uint8, [
-            None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
-        self.boxes2d = tf.placeholder(tf.float32, [None, 4])
-        self.boxes2d_scores = tf.placeholder(tf.float32, [None])
+#         self.rgb = tf.placeholder(
+#             tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
+#         self.bv = tf.placeholder(tf.uint8, [
+#                                  None, cfg.BV_LOG_FACTOR * cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR * cfg.INPUT_WIDTH, 3])
+#         self.bv_heatmap = tf.placeholder(tf.uint8, [
+#             None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
+#         self.boxes2d = tf.placeholder(tf.float32, [None, 4])
+#         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
         # NMS(2D)
-        with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
-            self.box2d_ind_after_nms = tf.image.non_max_suppression(
-                self.boxes2d, self.boxes2d_scores, max_output_size=cfg.RPN_NMS_POST_TOPK, iou_threshold=cfg.RPN_NMS_THRESH)
+#         with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
+#             self.box2d_ind_after_nms = tf.image.non_max_suppression(
+#                 self.boxes2d, self.boxes2d_scores, max_output_size=cfg.RPN_NMS_POST_TOPK, iou_threshold=cfg.RPN_NMS_THRESH)
 
         # summary and saver
         self.saver = tf.train.Saver(write_version=tf.train.SaverDef.V2,
                                     max_to_keep=10, pad_step_number=True, keep_checkpoint_every_n_hours=1.0)
 
-        self.train_summary = tf.summary.merge([
-            tf.summary.scalar('train/loss', self.loss),
+            
+        summary_list = [tf.summary.scalar('train/loss', self.loss),
             tf.summary.scalar('train/reg_loss', self.reg_loss),
-            tf.summary.scalar('train/cls_loss', self.cls_loss),
-            *[tf.summary.histogram(each.name, each) for each in self.params]
-        ])
+            tf.summary.scalar('train/cls_loss', self.cls_loss)]
+        for each in self.params:
+            summary_list.append(tf.summary.histogram(each.name, each))
+        self.train_summary = tf.summary.merge(summary_list)
 
-        self.validate_summary = tf.summary.merge([
-            tf.summary.scalar('validate/loss', self.loss),
-            tf.summary.scalar('validate/reg_loss', self.reg_loss),
-            tf.summary.scalar('validate/cls_loss', self.cls_loss)
-        ])
+
+
+#         self.train_summary = tf.summary.merge([
+#             tf.summary.scalar('train/loss', self.loss),
+#             tf.summary.scalar('train/reg_loss', self.reg_loss),
+#             tf.summary.scalar('train/cls_loss', self.cls_loss),
+#             [tf.summary.histogram(each.name, each) for each in self.params]
+#         ])
+
+#         self.validate_summary = tf.summary.merge([
+#             tf.summary.scalar('validate/loss', self.loss),
+#             tf.summary.scalar('validate/reg_loss', self.reg_loss),
+#             tf.summary.scalar('validate/cls_loss', self.cls_loss)
+#         ])
 
         # TODO: bird_view_summary and front_view_summary
 
-        self.predict_summary = tf.summary.merge([
-            tf.summary.image('predict/bird_view_lidar', self.bv),
-            tf.summary.image('predict/bird_view_heatmap', self.bv_heatmap),
-            tf.summary.image('predict/front_view_rgb', self.rgb),
-        ])
+#         self.predict_summary = tf.summary.merge([
+#             tf.summary.image('predict/bird_view_lidar', self.bv),
+#             tf.summary.image('predict/bird_view_heatmap', self.bv_heatmap),
+#             tf.summary.image('predict/front_view_rgb', self.rgb),
+#         ])
 
     def train_step(self, session, data, train=False, summary=False):
         # input:

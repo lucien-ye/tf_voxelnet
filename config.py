@@ -24,9 +24,10 @@ __C = edict()
 cfg = __C
 
 # for gpu allocation
-__C.GPU_AVAILABLE = '3,1,2,0'
+# __C.GPU_AVAILABLE = '3,1,2,0'
+__C.GPU_AVAILABLE = '0'
 __C.GPU_USE_COUNT = len(__C.GPU_AVAILABLE.split(','))
-__C.GPU_MEMORY_FRACTION = 1
+__C.GPU_MEMORY_FRACTION = 0.7
 
 # selected object
 __C.DETECT_OBJ = 'Car'  # Pedestrian/Cyclist
@@ -176,7 +177,6 @@ __C.RPN_SCORE_THRESH = 0.90
 
 # utils
 __C.CORNER2CENTER_AVG = True  # average version or max version
-
 
 if __name__ == '__main__':
     print('__C.ROOT_DIR = ' + __C.ROOT_DIR)
